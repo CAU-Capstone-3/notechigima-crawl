@@ -1,0 +1,79 @@
+import numpy as np
+import pandas as pd
+import csv
+import re
+import time
+
+import xlrd
+from urllib.parse import quote_plus
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+#드라이버 초기화
+from selenium.webdriver.common.by import By
+
+base_url = "https://www.comcbt.com"
+# keywords = [
+#     '정보처리기사', '정보처리산업기사', '정보처리기능사', '정보보안기사', '리눅스마스터 1급', '리눅스마스터 2급', '네트워크관리사 1급', '네트워크관리사 2급'
+# ]
+keywords = [
+    '정보처리기능사', '정보보안기사', '리눅스마스터 1급', '리눅스마스터 2급', '네트워크관리사 1급', '네트워크관리사 2급'
+]
+
+
+s = Service('~/Documents/chromedriver')
+SCROLL_PAUSE_TIME = 0.5
+
+options = Options()
+options.add_argument('--headless')
+
+driver = webdriver.Chrome(service=s, options=options)
+driver.get(base_url)
+
+driver.implicitly_wait(0.5)
+
+def do_download(cbt):
+    print('수집중 : ' + cbt.text)
+    cbt.send_keys(Keys.COMMAND +'\n')
+    driver.switch_to.window(driver.window_handles[-1])
+    time.sleep(0.5)
+
+    downloads = driver.find_elements(By.PARTIAL_LINK_TEXT, '.hwp')
+    for download in downloads:
+        if download.get_attribute('class') != 'bubble':
+            download.click()
+    
+    driver.close()
+    driver.switch_to.window(driver.window_handles[-1])
+
+
+for keyword in keywords:
+    driver.find_element(By.LINK_TEXT, keyword).click()
+    time.sleep(0.5)
+    driver.switch_to.window(driver.window_handles[-1])
+
+    while True:
+        cbts = []
+
+        titles = driver.find_elements(By.CLASS_NAME, 'hx')
+        for title in titles:
+            if '기출문제' in title.text:
+                cbts.append(title)
+
+        for cbt in cbts:
+            do_download(cbt)
+        
+        try:
+            driver.find_element(By.PARTIAL_LINK_TEXT, 'Next').click()
+        except:
+            break
+        
+    driver.switch_to.window(driver.window_handles[0])
+    
+
+#html = driver.page_source
+#soup = BeautifulSoup(html)
